@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>oCam_image_node &#8212; barcode_reader 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="3. umd_vision.oCam package" href="../libraries/umd_vision.oCam.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-scripts.barcode_filter_node">
+<span id="ocam-image-node"></span><h1>oCam_image_node<a class="headerlink" href="#module-scripts.barcode_filter_node" title="Permalink to this headline">¶</a></h1>
+<p>The BarcodeFilterNode simply filters barcode topics by certain filters.</p>
+<p>Actions are simple functions that return True or False depending on if the
+barcode fulfills or not the filter. Be careful with the ordering of the
+filter_actions parameter as the filters are tested in order and this may affect
+the outcome.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This node was made to easily add new filtering functions. To make a new one
+simple make sure it returns a bool. Also, because of this the paramenters
+used can be increased. It is important that the function name and the
+string in the filter_actions are the same.</p>
+<p>Sometimes the image_to_barcode_node has been seen to publish “/a”
+characters. Using this barcode_filter_node can help filter that type of
+weird publishing.</p>
+</div>
+<dl>
+<dt>ROS Parameters:</dt><dd><p>filter_actions (list of strings): list of filter actions to be done</p>
+<dl>
+<dt>length filter:</dt><dd><p>min_length (int): minimum length of barcode.raw_data</p>
+<p>max_length (int): maximum length of barcode.raw_data</p>
+</dd>
+<dt>contains filter:</dt><dd><p>contains_string (string): string that barcode.raw_data should have</p>
+</dd>
+</dl>
+</dd>
+<dt>Subscribes:</dt><dd><dl class="simple">
+<dt>barcode (umd_msgs/Barcode): the barcode found in the image. If more than</dt><dd><p>one barcode is present, it publishes them in separate messages.</p>
+</dd>
+</dl>
+</dd>
+<dt>Publishes:</dt><dd><p>filtered_barcode (umd_msgs/Barcode): the same barcode as subscribed. Only
+publishes if all filters are passed.</p>
+</dd>
+</dl>
+<dl class="class">
+<dt id="scripts.barcode_filter_node.BarcodeFilterNode">
+<em class="property">class </em><code class="sig-prename descclassname">scripts.barcode_filter_node.</code><code class="sig-name descname">BarcodeFilterNode</code><a class="reference internal" href="../_modules/scripts/barcode_filter_node.html#BarcodeFilterNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#scripts.barcode_filter_node.BarcodeFilterNode" title="Permalink to this definition">¶</a></dt>
+<dd><p>ROS Node to filter barcode topics in different ways</p>
+<dl class="method">
+<dt id="scripts.barcode_filter_node.BarcodeFilterNode.contains">
+<code class="sig-name descname">contains</code><span class="sig-paren">(</span><em class="sig-param">barcode</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/scripts/barcode_filter_node.html#BarcodeFilterNode.contains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#scripts.barcode_filter_node.BarcodeFilterNode.contains" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter function. Checks that barcode.raw_data contains the
+contains_string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>barcode</strong> (<em>umd_msgs/Barcode</em>) – a barcode</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>bool. True if filter is passed.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="scripts.barcode_filter_node.BarcodeFilterNode.length">
+<code class="sig-name descname">length</code><span class="sig-paren">(</span><em class="sig-param">barcode</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/scripts/barcode_filter_node.html#BarcodeFilterNode.length"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#scripts.barcode_filter_node.BarcodeFilterNode.length" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter function. Checks that the barcode.raw_data’s length
+is between min and max length.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>barcode</strong> (<em>umd_msgs/Barcode</em>) – a barcode</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>bool. True if filter is passed.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">barcode_reader</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">This are the libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../libraries/umd_vision.barcode.html">1. umd_vision.barcode package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../libraries/umd_vision.image.html">2. umd_vision.image package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../libraries/umd_vision.oCam.html">3. umd_vision.oCam package</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">oCam_image_node</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../libraries/umd_vision.oCam.html" title="previous chapter">3. umd_vision.oCam package</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Ricardo Elizondo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/ros_nodes/oCam_image_node.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

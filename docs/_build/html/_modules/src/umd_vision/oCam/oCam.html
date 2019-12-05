@@ -1,0 +1,246 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>src.umd_vision.oCam.oCam &#8212; barcode_reader 1.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for src.umd_vision.oCam.oCam</h1><div class="highlight"><pre>
+<span></span><span class="ch">#! /usr/bin/env python2</span>
+
+<span class="sd">&quot;&quot;&quot;This module is used to interface with a oCam device&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+
+<span class="kn">from</span> <span class="nn">umd_vision.barcode.reader</span> <span class="k">import</span> <span class="n">Analyzer</span>
+<span class="kn">import</span> <span class="nn">liboCams.liboCams</span> <span class="k">as</span> <span class="nn">liboCams</span>
+
+
+<div class="viewcode-block" id="oCam"><a class="viewcode-back" href="../../../../full/src.umd_vision.oCam.html#src.umd_vision.oCam.oCam.oCam">[docs]</a><span class="k">class</span> <span class="nc">oCam</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Provides an interface to an oCam camera device</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        has only been tested on an oCam 5CRO-U found here</span>
+<span class="sd">        http://withrobot.com/en/camera/ocam-5cro-u/</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        ./read_oCam.py -i 5 -t 10 -s</span>
+<span class="sd">            (5th interface, 10sec, show image)</span>
+<span class="sd">        ./read_oCam.py -i 0 -t 5 -s -c 0.1 -n 1</span>
+<span class="sd">            (0th interface, 5 seconds, show, cut horizontall 10%, camera 1</span>
+<span class="sd">            (in case of multiple cameras))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cam_settings</span><span class="p">):</span>
+        <span class="c1"># parser options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parser</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># camera info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fmtlist</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrlist</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cam_settings</span> <span class="o">=</span> <span class="n">cam_settings</span>
+
+        <span class="c1"># barcode analyzer object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">barcode_decoder</span> <span class="o">=</span> <span class="n">Analyzer</span><span class="p">()</span>
+
+<div class="viewcode-block" id="oCam.load_camera"><a class="viewcode-back" href="../../../../full/src.umd_vision.oCam.html#src.umd_vision.oCam.oCam.oCam.load_camera">[docs]</a>    <span class="k">def</span> <span class="nf">load_camera</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;oCam&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Finds and initializes camera. If multiple cameras are connected</span>
+<span class="sd">        it will connect to the one in self.options.camera_number</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name (string): camera name. defaults to &quot;oCam&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cameras</span> <span class="o">=</span> <span class="n">liboCams</span><span class="o">.</span><span class="n">FindCameras</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cameras</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">exit</span><span class="p">()</span>
+        <span class="n">devpath</span> <span class="o">=</span> <span class="n">cameras</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cam_settings</span><span class="p">[</span><span class="s2">&quot;camera_number&quot;</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera</span> <span class="o">=</span> <span class="n">liboCams</span><span class="o">.</span><span class="n">oCams</span><span class="p">(</span><span class="n">devpath</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="nb">print</span> <span class="s2">&quot;Format List&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fmtlist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFormatList</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fmtlist</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">fmt</span>
+
+        <span class="nb">print</span> <span class="s2">&quot;Control List&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctrlist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetControlList</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrlist</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">ID:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctrlist</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cam_settings</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fmtlist</span><span class="p">):</span>
+            <span class="nb">print</span> <span class="s2">&quot;INDEX error&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cam_settings</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;index reset to default value 0&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cam_settings</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">len_range</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cam_settings</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]}</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">len_range</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">camera</span> <span class="o">=</span> <span class="n">liboCams</span><span class="o">.</span><span class="n">oCams</span><span class="p">(</span><span class="n">devpath</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="nb">print</span> <span class="s2">&quot;SET&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fmtlist</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">Set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fmtlist</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetName</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">Start</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_settings</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="oCam.set_settings"><a class="viewcode-back" href="../../../../full/src.umd_vision.oCam.html#src.umd_vision.oCam.oCam.oCam.set_settings">[docs]</a>    <span class="k">def</span> <span class="nf">set_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sets camera settings.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            settings (dict): dictionary containing values for settings</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">SetControl</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ctrlist</span><span class="p">[</span><span class="s2">&quot;Saturation&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cam_settings</span><span class="p">[</span><span class="s2">&quot;saturation&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">SetControl</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ctrlist</span><span class="p">[</span><span class="s2">&quot;Contrast&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cam_settings</span><span class="p">[</span><span class="s2">&quot;contrast&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">SetControl</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ctrlist</span><span class="p">[</span><span class="s2">&quot;Brightness&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cam_settings</span><span class="p">[</span><span class="s2">&quot;brightness&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">SetControl</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ctrlist</span><span class="p">[</span><span class="s2">&quot;Exposure (Absolute)&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">cam_settings</span><span class="p">[</span><span class="s2">&quot;exposure&quot;</span><span class="p">]</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="oCam.single_raw_image"><a class="viewcode-back" href="../../../../full/src.umd_vision.oCam.html#src.umd_vision.oCam.oCam.oCam.single_raw_image">[docs]</a>    <span class="k">def</span> <span class="nf">single_raw_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;oCamS-1CGN-U&quot;</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BAYER_GB2BGR</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;oCam-1CGN-U&quot;</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">()</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BAYER_GB2BGR</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;oCam-1MGN-U&quot;</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">()</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_GRAY2BGR</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;oCam-5CRO-U&quot;</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">()</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_YUV2BGR_YUYV</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">()</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_YUV2BGR_YUYV</span><span class="p">)</span>
+
+        <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">rgb</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">rgb</span></div>
+
+<div class="viewcode-block" id="oCam.single_processed_image"><a class="viewcode-back" href="../../../../full/src.umd_vision.oCam.html#src.umd_vision.oCam.oCam.oCam.single_processed_image">[docs]</a>    <span class="k">def</span> <span class="nf">single_processed_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;oCamS-1CGN-U&quot;</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BAYER_GB2BGR</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;oCam-1CGN-U&quot;</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">()</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BAYER_GB2BGR</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;oCam-1MGN-U&quot;</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">()</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_GRAY2BGR</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;oCam-5CRO-U&quot;</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">()</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_YUV2BGR_YUYV</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera</span><span class="o">.</span><span class="n">GetFrame</span><span class="p">()</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_YUV2BGR_YUYV</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">rgb</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">barcode_reader</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">This are the libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../libraries/umd_vision.barcode.html">1. umd_vision.barcode package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../libraries/umd_vision.image.html">2. umd_vision.image package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../libraries/umd_vision.oCam.html">3. umd_vision.oCam package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../ros_nodes/oCam_image_node.html">oCam_image_node</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Ricardo Elizondo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

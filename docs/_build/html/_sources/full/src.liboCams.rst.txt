@@ -1,0 +1,22 @@
+src.liboCams package
+====================
+
+Submodules
+----------
+
+src.liboCams.liboCams module
+----------------------------
+
+.. automodule:: src.liboCams.liboCams
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: src.liboCams
+   :members:
+   :undoc-members:
+   :show-inheritance:

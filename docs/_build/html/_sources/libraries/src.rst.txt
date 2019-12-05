@@ -1,0 +1,18 @@
+src package
+===========
+
+Subpackages
+-----------
+
+.. toctree::
+
+   src.liboCams
+   src.umd_vision
+
+Module contents
+---------------
+
+.. automodule:: src
+   :members:
+   :undoc-members:
+   :show-inheritance:

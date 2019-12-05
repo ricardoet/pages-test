@@ -1,0 +1,22 @@
+src.umd\_vision.barcode package
+===============================
+
+Submodules
+----------
+
+src.umd\_vision.barcode.reader module
+-------------------------------------
+
+.. automodule:: src.umd_vision.barcode.reader
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: src.umd_vision.barcode
+   :members:
+   :undoc-members:
+   :show-inheritance:

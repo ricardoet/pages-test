@@ -1,0 +1,19 @@
+src.umd\_vision package
+=======================
+
+Subpackages
+-----------
+
+.. toctree::
+
+   src.umd_vision.barcode
+   src.umd_vision.image
+   src.umd_vision.oCam
+
+Module contents
+---------------
+
+.. automodule:: src.umd_vision
+   :members:
+   :undoc-members:
+   :show-inheritance:

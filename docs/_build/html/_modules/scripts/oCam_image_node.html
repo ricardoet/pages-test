@@ -1,0 +1,263 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>scripts.oCam_image_node &#8212; barcode_reader 1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for scripts.oCam_image_node</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python2</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;The oCamImageNode connects to an oCam camera and publishes the image feed</span>
+
+<span class="sd">This node is intended to be used with an oCam camera. Currently it has only</span>
+<span class="sd">been tested with an oCam 5CRO-U found here</span>
+<span class="sd">http://withrobot.com/en/camera/ocam-5cro-u/</span>
+
+<span class="sd">Sets up the camera with the provided configuration values and publishes</span>
+<span class="sd">Image messages to the topic &quot;image&quot;.</span>
+
+<span class="sd">Note for INDEX:</span>
+<span class="sd">       Index# - (colormode, width, height, fps)</span>
+<span class="sd">       0 - (&#39;YUYV 4:2:2&#39;, 2592L, 1944L, 7)</span>
+<span class="sd">       1 - (&#39;YUYV 4:2:2&#39;, 2592L, 1944L, 3)</span>
+<span class="sd">       2 - (&#39;YUYV 4:2:2&#39;, 1920L, 1080L, 15)</span>
+<span class="sd">       3 - (&#39;YUYV 4:2:2&#39;, 1920L, 1080L, 7)</span>
+<span class="sd">       4 - (&#39;YUYV 4:2:2&#39;, 1280L, 960L, 30)</span>
+<span class="sd">       5 - (&#39;YUYV 4:2:2&#39;, 1280L, 960L, 15)</span>
+<span class="sd">       6 - (&#39;YUYV 4:2:2&#39;, 1280L, 720L, 30)</span>
+<span class="sd">       7 - (&#39;YUYV 4:2:2&#39;, 1280L, 720L, 15)</span>
+<span class="sd">       8 - (&#39;YUYV 4:2:2&#39;, 640L, 480L, 120)</span>
+<span class="sd">       9 - (&#39;YUYV 4:2:2&#39;, 640L, 480L, 90)</span>
+<span class="sd">       10 - (&#39;YUYV 4:2:2&#39;, 640L, 480L, 60)</span>
+<span class="sd">       11 - (&#39;YUYV 4:2:2&#39;, 640L, 480L, 30)</span>
+<span class="sd">       12 - (&#39;YUYV 4:2:2&#39;, 320L, 240L, 120)</span>
+<span class="sd">       13 - (&#39;YUYV 4:2:2&#39;, 320L, 240L, 90)</span>
+<span class="sd">       14 - (&#39;YUYV 4:2:2&#39;, 320L, 240L, 60)</span>
+<span class="sd">       15 - (&#39;YUYV 4:2:2&#39;, 320L, 240L, 30)</span>
+<span class="sd">       16 - (&#39;Motion-JPEG&#39;, 1920L, 1080L, 30)</span>
+<span class="sd">       17 - (&#39;Motion-JPEG&#39;, 1920L, 1080L, 15)</span>
+<span class="sd">       18 - (&#39;Motion-JPEG&#39;, 1280L, 720L, 45)</span>
+<span class="sd">       19 - (&#39;Motion-JPEG&#39;, 1280L, 720L, 30)</span>
+<span class="sd">       20 - (&#39;Motion-JPEG&#39;, 1280L, 720L, 15)</span>
+<span class="sd">       21 - (&#39;Motion-JPEG&#39;, 640L, 480L, 30)</span>
+<span class="sd">       22 - (&#39;Motion-JPEG&#39;, 640L, 480L, 15)</span>
+
+
+<span class="sd">ROS Parameters:</span>
+<span class="sd">    saturation (int): camera saturation value [0, 8]</span>
+
+<span class="sd">    contrast (int): camera contrast value [0, 8]</span>
+
+<span class="sd">    brightness (int): camera brightness value [-4, 4]</span>
+
+<span class="sd">    exposure (int): camera exposure value [0, 10]</span>
+
+<span class="sd">    playtime (int): duration of camera feed. 0 for infinite.</span>
+
+<span class="sd">    cutting (float): percentage of horizontal camera cut. [0.0, 1.0]</span>
+
+<span class="sd">    index (int): camera resolutions &amp; fps setting. See note above. Beware that</span>
+<span class="sd">        this can change with firmware updates (although newest is 2 years old)</span>
+
+<span class="sd">    camera_number (int): choose camera device, in case of more than one</span>
+<span class="sd">        oCam connected [0, n-1]</span>
+
+<span class="sd">    encoding (string): camera encoding to transform from CV2 to</span>
+<span class="sd">        ROS Image topic type. Options can be found here</span>
+<span class="sd">        http://wiki.ros.org/cv_bridge/Tutorials/ConvertingBetweenROSImagesAndOpenCVImagesPython</span>
+
+<span class="sd">Publishers:</span>
+<span class="sd">    image (sensor_msgs/Image): the output image</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">rospy</span>
+<span class="kn">from</span> <span class="nn">sensor_msgs.msg</span> <span class="k">import</span> <span class="n">Image</span>
+<span class="kn">from</span> <span class="nn">umd_vision.oCam.oCam</span> <span class="k">import</span> <span class="n">oCam</span>
+
+<span class="kn">from</span> <span class="nn">cv_bridge</span> <span class="k">import</span> <span class="n">CvBridge</span><span class="p">,</span> <span class="n">CvBridgeError</span>
+
+
+<div class="viewcode-block" id="oCamNode"><a class="viewcode-back" href="../../scripts/scripts.html#scripts.oCam_image_node.oCamNode">[docs]</a><span class="k">class</span> <span class="nc">oCamNode</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;ROS implementation for an oCam connection&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pub</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">Publisher</span><span class="p">(</span><span class="s2">&quot;image&quot;</span><span class="p">,</span> <span class="n">Image</span><span class="p">,</span> <span class="n">queue_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">saturation</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~saturation&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contrast</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~contrast&quot;</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">brightness</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~brightness&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exposure</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~exposure&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoding</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~encoding&quot;</span><span class="p">,</span> <span class="s2">&quot;passthrough&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">playtime</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~playtime&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cutting</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~cutting&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~index&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_number</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~camera_number&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cam</span> <span class="o">=</span> <span class="n">oCam</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;saturation&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">saturation</span><span class="p">,</span>
+                <span class="s2">&quot;contrast&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">contrast</span><span class="p">,</span>
+                <span class="s2">&quot;brightness&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">brightness</span><span class="p">,</span>
+                <span class="s2">&quot;exposure&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">exposure</span><span class="p">,</span>
+                <span class="s2">&quot;playtime&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">playtime</span><span class="p">,</span>
+                <span class="s2">&quot;cutting&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">cutting</span><span class="p">,</span>
+                <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span>
+                <span class="s2">&quot;camera_number&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera_number</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bridge</span> <span class="o">=</span> <span class="n">CvBridge</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cam</span><span class="o">.</span><span class="n">load_camera</span><span class="p">()</span>
+
+<div class="viewcode-block" id="oCamNode.publish"><a class="viewcode-back" href="../../scripts/scripts.html#scripts.oCam_image_node.oCamNode.publish">[docs]</a>    <span class="k">def</span> <span class="nf">publish</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Transforms from CV2 image to ROS Image and publishes topic&quot;&quot;&quot;</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">rospy</span><span class="o">.</span><span class="n">is_shutdown</span><span class="p">():</span>
+            <span class="n">camera_image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cam</span><span class="o">.</span><span class="n">single_raw_image</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">ros_image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bridge</span><span class="o">.</span><span class="n">cv2_to_imgmsg</span><span class="p">(</span>
+                    <span class="n">camera_image</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="n">CvBridgeError</span><span class="p">:</span>
+                <span class="n">ros_image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bridge</span><span class="o">.</span><span class="n">cv2_to_imgmsg</span><span class="p">(</span>
+                    <span class="n">camera_image</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;passthrough&quot;</span>
+                <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">pub</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">ros_image</span><span class="p">)</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">rospy</span><span class="o">.</span><span class="n">init_node</span><span class="p">(</span><span class="s2">&quot;oCam_image_node&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">oCam_node</span> <span class="o">=</span> <span class="n">oCamNode</span><span class="p">()</span>
+        <span class="n">oCam_node</span><span class="o">.</span><span class="n">publish</span><span class="p">()</span>
+        <span class="n">rospy</span><span class="o">.</span><span class="n">spin</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">rospy</span><span class="o">.</span><span class="n">ROSInterruptException</span><span class="p">:</span>
+        <span class="k">pass</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">barcode_reader</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../libraries/modules.html">umd_vision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../libraries/umd_vision.html">umd_vision package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../libraries/umd_vision.barcode.html">umd_vision.barcode package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../libraries/umd_vision.image.html">umd_vision.image package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../libraries/umd_vision.oCam.html">umd_vision.oCam package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ros_nodes/modules.html">scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ros_nodes/scripts.html">scripts package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ros_nodes/scripts.oCamNode.html">scripts.oCamNode package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../scripts/modules.html">scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../scripts/scripts.html">scripts package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../scripts/scripts.oCamNode.html">scripts.oCamNode package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../launch_files/modules.html">launch</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../full/scripts.html">scripts package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full/scripts.oCamNode.html">scripts.oCamNode package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full/setup.html">setup module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full/src.html">src package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full/src.liboCams.html">src.liboCams package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full/src.umd_vision.html">src.umd_vision package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full/src.umd_vision.barcode.html">src.umd_vision.barcode package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full/src.umd_vision.image.html">src.umd_vision.image package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full/src.umd_vision.oCam.html">src.umd_vision.oCam package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Ricardo Elizondo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

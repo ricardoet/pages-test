@@ -1,0 +1,226 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>scripts.barcode_filter_node &#8212; barcode_reader 1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for scripts.barcode_filter_node</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python2</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;The BarcodeFilterNode simply filters barcode topics by certain filters.</span>
+
+<span class="sd">Actions are simple functions that return True or False depending on if the</span>
+<span class="sd">barcode fulfills or not the filter. Be careful with the ordering of the</span>
+<span class="sd">filter_actions parameter as the filters are tested in order and this may affect</span>
+<span class="sd">the outcome.</span>
+
+<span class="sd">Note:</span>
+<span class="sd">    This node was made to easily add new filtering functions. To make a new one</span>
+<span class="sd">    simple make sure it returns a bool. Also, because of this the paramenters</span>
+<span class="sd">    used can be increased. It is important that the function name and the</span>
+<span class="sd">    string in the filter_actions are the same.</span>
+
+<span class="sd">    Sometimes the image_to_barcode_node has been seen to publish &quot;/a&quot;</span>
+<span class="sd">    characters. Using this barcode_filter_node can help filter that type of</span>
+<span class="sd">    weird publishing.</span>
+
+<span class="sd">ROS Parameters:</span>
+<span class="sd">    filter_actions (list of strings): list of filter actions to be done</span>
+
+<span class="sd">    length filter:</span>
+<span class="sd">        min_length (int): minimum length of barcode.raw_data</span>
+
+<span class="sd">        max_length (int): maximum length of barcode.raw_data</span>
+
+<span class="sd">    contains filter:</span>
+<span class="sd">        contains_string (string): string that barcode.raw_data should have</span>
+
+<span class="sd">Subscribes:</span>
+<span class="sd">    barcode (umd_msgs/Barcode): the barcode found in the image. If more than</span>
+<span class="sd">        one barcode is present, it publishes them in separate messages.</span>
+
+<span class="sd">Publishes:</span>
+<span class="sd">    filtered_barcode (umd_msgs/Barcode): the same barcode as subscribed. Only</span>
+<span class="sd">    publishes if all filters are passed.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">rospy</span>
+<span class="kn">from</span> <span class="nn">umd_msgs.msg</span> <span class="kn">import</span> <span class="n">Barcode</span>
+
+
+<div class="viewcode-block" id="BarcodeFilterNode"><a class="viewcode-back" href="../../ros_nodes/oCam_image_node.html#scripts.barcode_filter_node.BarcodeFilterNode">[docs]</a><span class="k">class</span> <span class="nc">BarcodeFilterNode</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;ROS Node to filter barcode topics in different ways&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filter_actions</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~filter_actions&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;empty&quot;</span><span class="p">])</span>
+
+        <span class="c1"># length params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_length</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~min_length&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~max_length&quot;</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+
+        <span class="c1"># contains params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contains_string</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">rospy</span><span class="o">.</span><span class="n">get_param</span><span class="p">(</span><span class="s2">&quot;~contains_string&quot;</span><span class="p">,</span> <span class="s2">&quot;23&quot;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">barcode_sub</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">Subscriber</span><span class="p">(</span><span class="s2">&quot;barcode&quot;</span><span class="p">,</span> <span class="n">Barcode</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_callback</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">barcode_pub</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">Publisher</span><span class="p">(</span><span class="s2">&quot;filtered_barcode&quot;</span><span class="p">,</span> <span class="n">Barcode</span><span class="p">,</span> <span class="n">queue_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">empty</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">barcode</span><span class="p">):</span>
+        <span class="n">rospy</span><span class="o">.</span><span class="n">logfatal</span><span class="p">(</span><span class="s2">&quot;ROS Param Filter Actions from BarcodeFilterNode is empty&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_callback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">barcode</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Callback triggered from the barcode subscriber. Iterates over</span>
+<span class="sd">        the filter_actions parameter, looks for the filtering functions with</span>
+<span class="sd">        the same name and runs the barcode through them. If all are passed,</span>
+<span class="sd">        republishes it under filtered_barcode</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            barcode (umd_msgs/Barcode): the barcode from the subscribed topic.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">action</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_actions</span><span class="p">:</span>
+            <span class="n">test_func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">BarcodeFilterNode</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">test_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">barcode</span><span class="p">):</span>
+                <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">barcode_pub</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">barcode</span><span class="p">)</span>
+
+<div class="viewcode-block" id="BarcodeFilterNode.length"><a class="viewcode-back" href="../../ros_nodes/oCam_image_node.html#scripts.barcode_filter_node.BarcodeFilterNode.length">[docs]</a>    <span class="k">def</span> <span class="nf">length</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">barcode</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Filter function. Checks that the barcode.raw_data&#39;s length</span>
+<span class="sd">        is between min and max length.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            barcode (umd_msgs/Barcode): a barcode</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool. True if filter is passed.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">barcode</span><span class="o">.</span><span class="n">raw_data</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_length</span>
+            <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">barcode</span><span class="o">.</span><span class="n">raw_data</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="BarcodeFilterNode.contains"><a class="viewcode-back" href="../../ros_nodes/oCam_image_node.html#scripts.barcode_filter_node.BarcodeFilterNode.contains">[docs]</a>    <span class="k">def</span> <span class="nf">contains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">barcode</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Filter function. Checks that barcode.raw_data contains the</span>
+<span class="sd">        contains_string.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            barcode (umd_msgs/Barcode): a barcode</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool. True if filter is passed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contains_string</span> <span class="ow">in</span> <span class="n">barcode</span><span class="o">.</span><span class="n">raw_data</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">rospy</span><span class="o">.</span><span class="n">init_node</span><span class="p">(</span><span class="s2">&quot;barcode_filter_node&quot;</span><span class="p">,</span> <span class="n">anonymous</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">barcode_filter</span> <span class="o">=</span> <span class="n">BarcodeFilterNode</span><span class="p">()</span>
+        <span class="n">rospy</span><span class="o">.</span><span class="n">spin</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">rospy</span><span class="o">.</span><span class="n">ROSInterruptException</span><span class="p">:</span>
+        <span class="k">pass</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">barcode_reader</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">This are the libraries</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../libraries/umd_vision.barcode.html">1. umd_vision.barcode package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../libraries/umd_vision.image.html">2. umd_vision.image package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../libraries/umd_vision.oCam.html">3. umd_vision.oCam package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ros_nodes/oCam_image_node.html">oCam_image_node</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Ricardo Elizondo.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

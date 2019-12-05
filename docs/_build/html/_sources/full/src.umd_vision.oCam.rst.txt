@@ -1,0 +1,22 @@
+src.umd\_vision.oCam package
+============================
+
+Submodules
+----------
+
+src.umd\_vision.oCam.oCam module
+--------------------------------
+
+.. automodule:: src.umd_vision.oCam.oCam
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: src.umd_vision.oCam
+   :members:
+   :undoc-members:
+   :show-inheritance:

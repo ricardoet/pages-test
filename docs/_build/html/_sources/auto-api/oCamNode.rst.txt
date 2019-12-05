@@ -1,0 +1,30 @@
+oCamNode package
+================
+
+Submodules
+----------
+
+oCamNode.oCam\_image\_node module
+---------------------------------
+
+.. automodule:: oCamNode.oCam_image_node
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+oCamNode.ocam2 module
+---------------------
+
+.. automodule:: oCamNode.ocam2
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: oCamNode
+   :members:
+   :undoc-members:
+   :show-inheritance:
